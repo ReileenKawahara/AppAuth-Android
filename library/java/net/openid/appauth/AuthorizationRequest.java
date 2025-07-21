@@ -270,6 +270,9 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
     static final String PARAM_CLIENT_ID = "client_id";
 
     @VisibleForTesting
+    static final String PARAM_CLIENT_SECRET = "client_secret";
+
+    @VisibleForTesting
     static final String PARAM_CODE_CHALLENGE = "code_challenge";
 
     @VisibleForTesting
@@ -313,6 +316,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
 
     private static final Set<String> BUILT_IN_PARAMS = builtInParams(
             PARAM_CLIENT_ID,
+            PARAM_CLIENT_SECRET,
             PARAM_CODE_CHALLENGE,
             PARAM_CODE_CHALLENGE_METHOD,
             PARAM_DISPLAY,
@@ -329,6 +333,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
 
     private static final String KEY_CONFIGURATION = "configuration";
     private static final String KEY_CLIENT_ID = "clientId";
+    private static final String KEY_CLIENT_SECRET = "client_secret";
     private static final String KEY_DISPLAY = "display";
     private static final String KEY_LOGIN_HINT = "login_hint";
     private static final String KEY_PROMPT = "prompt";
@@ -369,6 +374,17 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
      */
     @NonNull
     public final String clientId;
+
+    /**
+     * The client secret.
+     *
+     * @see "The OAuth 2.0 Authorization Framework (RFC 6749), Section 4
+     * <https://tools.ietf.org/html/rfc6749#section-4>"
+     * @see "The OAuth 2.0 Authorization Framework (RFC 6749), Section 4.1.1
+     * <https://tools.ietf.org/html/rfc6749#section-4.1.1>"
+     */
+    @Nullable
+    public final String clientSecret;
 
     /**
      * The OpenID Connect 1.0 `display` parameter. This is a string that specifies how the
@@ -576,6 +592,9 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
         private String mClientId;
 
         @Nullable
+        private String mClientSecret;
+
+        @Nullable
         private String mDisplay;
 
         @Nullable
@@ -669,6 +688,18 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
         @NonNull
         public Builder setClientId(@NonNull String clientId) {
             mClientId = checkNotEmpty(clientId, "client ID cannot be null or empty");
+            return this;
+        }
+
+        /**
+         * Specifies the OpenID Connect 1.0 `client_secret` parameter.
+         *
+         * @see client_secret
+         * @see "OpenID Connect Core 1.0, Section 3.1.2.1
+         * <https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.3.1.2.1>"
+         */
+        public Builder setClientSecret(@Nullable String clientSecret) {
+            mClientSecret = checkNullOrNotEmpty(clientSecret, "client secret must be null or not empty");
             return this;
         }
 
@@ -1066,6 +1097,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
             return new AuthorizationRequest(
                     mConfiguration,
                     mClientId,
+                    mClientSecret,
                     mResponseType,
                     mRedirectUri,
                     mDisplay,
@@ -1088,6 +1120,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
     private AuthorizationRequest(
             @NonNull AuthorizationServiceConfiguration configuration,
             @NonNull String clientId,
+            @Nullable String clientSecret,
             @NonNull String responseType,
             @NonNull Uri redirectUri,
             @Nullable String display,
@@ -1112,6 +1145,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
         this.additionalParameters = additionalParameters;
 
         // optional fields
+        this.clientSecret = clientSecret;
         this.display = display;
         this.loginHint = loginHint;
         this.prompt = prompt;
@@ -1181,6 +1215,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
                 .appendQueryParameter(PARAM_CLIENT_ID, clientId)
                 .appendQueryParameter(PARAM_RESPONSE_TYPE, responseType);
 
+        UriUtil.appendQueryParameterIfNotNull(uriBuilder, PARAM_CLIENT_SECRET, clientSecret);
         UriUtil.appendQueryParameterIfNotNull(uriBuilder, PARAM_DISPLAY, display);
         UriUtil.appendQueryParameterIfNotNull(uriBuilder, PARAM_LOGIN_HINT, loginHint);
         UriUtil.appendQueryParameterIfNotNull(uriBuilder, PARAM_PROMPT, prompt);
@@ -1215,6 +1250,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
         JSONObject json = new JSONObject();
         JsonUtil.put(json, KEY_CONFIGURATION, configuration.toJson());
         JsonUtil.put(json, KEY_CLIENT_ID, clientId);
+        JsonUtil.put(json, KEY_CLIENT_SECRET, clientSecret);
         JsonUtil.put(json, KEY_RESPONSE_TYPE, responseType);
         JsonUtil.put(json, KEY_REDIRECT_URI, redirectUri.toString());
         JsonUtil.putIfNotNull(json, KEY_DISPLAY, display);
@@ -1258,6 +1294,7 @@ public class AuthorizationRequest implements AuthorizationManagementRequest {
         return new AuthorizationRequest(
                 AuthorizationServiceConfiguration.fromJson(json.getJSONObject(KEY_CONFIGURATION)),
                 JsonUtil.getString(json, KEY_CLIENT_ID),
+                JsonUtil.getString(json, KEY_CLIENT_SECRET),
                 JsonUtil.getString(json, KEY_RESPONSE_TYPE),
                 JsonUtil.getUri(json, KEY_REDIRECT_URI),
                 JsonUtil.getStringIfDefined(json, KEY_DISPLAY),
